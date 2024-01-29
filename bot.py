@@ -1,3 +1,4 @@
+import random
 import time
 import threading
 from datetime import timedelta, datetime
@@ -31,14 +32,14 @@ class TwitchBot(TwitchIrc):
         self.deaths = 0
         self.deaths_boss = ' '
         self.boss_active = False
-        self.stopped_boss = False
+        self.boss_stopped = False
         self.boss_start_time = None
         self.boss_name = ' '
         self.boss_timer = ' '
         self.boss_timer_file = ' '
         self.last_death_plus_time = 0
         self.last_death_minus_time = 0
-        self.death_command_cooldown = 15
+        self.command_cooldown = 1
         self.last_stop_boss_time = 0
         self.last_start_boss_time = 0
         self.last_set_deaths_time = 0
@@ -46,6 +47,7 @@ class TwitchBot(TwitchIrc):
         self.users = ['fiz0waty_', 'overpow', 'krwawyy', 'apsik', 'seve__', 'sakyuu', 'aiszjaa', 'mhadox_',
                       'superjez', 'kebes95', 'martozaur', 'elkabaczek', 'vusapion']
         self.name_file = self.channel + '.txt'
+        self.emotes = ['aha9', 'aha1000', "HAHAHA", "beka", "alejaja" "gachiRoll", "duch", "buh", "xdd", "xpp", "trup"]
 
     def send_privmsg(self, channel, text):
         self.send_command(f'PRIVMSG #{channel} :{text}')
@@ -164,133 +166,143 @@ class TwitchBot(TwitchIrc):
         if message.irc_command == 'PRIVMSG':
 
             if message.text_command == '!deaths':
-                if self.boss_active and self.stopped_boss is False:
+                if self.boss_active and self.boss_stopped is False:
                     self.send_privmsg(message.channel, f'@{message.user} {self.boss_name} robiony od '
                                                        f'{self.boss_timer} i tylko {self.deaths_boss} wyjebki ok w sumie {self.deaths}')
                 else:
-                    self.send_privmsg(message.channel, f'@{message.user} {message.channel} wypierdolił się już {self.deaths} razy beka')
-            if message.user.lower() in self.users and message.channel.lower() == message.channel.lower() or self.parse_badge(
-                    message.badge_info):
-                current_time = time.time()
-                if message.text_command == '!death+':
-                    if current_time - self.last_death_plus_time >= self.death_command_cooldown:
-                        self.deaths += 1
-                        if self.boss_active and self.stopped_boss is False:
-                            if self.deaths_boss == ' ':
-                                self.deaths_boss = 0
-                            self.deaths_boss += 1
+                    self.send_privmsg(message.channel,
+                                      f'@{message.user} {message.channel} wypierdolił się już {self.deaths} razy {random.choice(self.emotes)}')
+            # if message.user.lower() in self.users and message.channel.lower() == message.channel.lower() or self.parse_badge(
+            #         message.badge_info):
+            current_time = time.time()
+            if message.text_command == '!death+':
+                if current_time - self.last_death_plus_time >= self.command_cooldown:
+                    self.deaths += 1
+                    if self.boss_active and self.boss_stopped is False:
+                        if self.deaths_boss == ' ':
+                            self.deaths_boss = 0
+                        self.deaths_boss += 1
+                        self.send_privmsg(message.channel,
+                                          f'{self.deaths_boss} wyjebek na bossie i {self.deaths} ugółem {random.choice(self.emotes)}')
+                    else:
+                        self.send_privmsg(message.channel, f'Wypierdolki: {self.deaths} {random.choice(self.emotes)}')
+                    self.last_death_plus_time = current_time
+
+            elif message.text_command == '!death-':
+                if current_time - self.last_death_minus_time >= self.command_cooldown:
+                    self.deaths -= 1
+                    if self.boss_active and self.boss_stopped is False:
+                        if self.deaths_boss == ' ':
+                            self.deaths_boss = 0
+                        if self.deaths_boss > 0: self.deaths_boss -= 1
+                        self.send_privmsg(message.channel,
+                                          f'{self.deaths_boss} wyjebek na bossie i {self.deaths} ugółem {random.choice(self.emotes)}')
+                    else:
+                        self.send_privmsg(message.channel, f'Wypierdolki: {self.deaths} {random.choice(self.emotes)}')
+                    self.last_death_minus_time = current_time
+
+            elif message.text.startswith('!setdeaths'):
+                command_parts = message.text.split(' ')
+                if len(command_parts) >= 2:
+                    if current_time - self.last_set_deaths_time >= self.command_cooldown:
+                        try:
+                            # Sprawdzenie, czy druga część jest liczbą
+                            self.deaths = int(command_parts[1])
+                            self.send_privmsg(message.channel, f'Ustawiono liczbę śmierci na: {self.deaths}')
+                        except ValueError:
                             self.send_privmsg(message.channel,
-                                              f'{self.deaths_boss} wyjebek na bossie i {self.deaths} ugółem baxton')
-                        else:
-                            self.send_privmsg(message.channel, f'Wypierdolki: {self.deaths} xdd')
-                        self.last_death_plus_time = current_time
+                                              f'@{message.user} Coś się zjebało {random.choice(self.emotes)} oznacz mnie i napisz co jest 5')
+                        self.last_set_deaths_time = current_time
 
-                elif message.text_command == '!death-':
-                    if current_time - self.last_death_minus_time >= self.death_command_cooldown:
-                        self.deaths -= 1
-                        if self.boss_active and self.stopped_boss is False:
-                            if self.deaths_boss == ' ':
-                                self.deaths_boss = 0
-                            if self.deaths_boss > 0: self.deaths_boss -= 1
-                            self.send_privmsg(message.channel,
-                                              f'{self.deaths_boss} wyjebek na bossie i {self.deaths} ugółem baxton')
-                        else:
-                            self.send_privmsg(message.channel, f'Wypierdolki: {self.deaths}')
-                        self.last_death_minus_time = current_time
-
-                elif message.text.startswith('!setdeaths'):
-                    command_parts = message.text.split(' ')
-                    if len(command_parts) >= 2:
-                        if current_time - self.last_set_deaths_time >= self.death_command_cooldown:
-                            try:
-                                # Sprawdzenie, czy druga część jest liczbą
-                                self.deaths = int(command_parts[1])
-                                self.send_privmsg(message.channel, f'Ustawiono liczbę śmierci na: {self.deaths}')
-                            except ValueError:
-                                self.send_privmsg(message.channel,
-                                                  f'@{message.user} Coś się zjebało okok oznacz mnie i napisz co jest 5')
-                            self.last_set_deaths_time = current_time
-
-                elif message.text.startswith('!setbossdeaths'):
-                    if self.boss_active:
-                        command_parts = message.text.split()
-                        if len(command_parts) >= 2:
-                            try:
-                                self.deaths_boss = int(command_parts[1])
-                                self.send_privmsg(message.channel,
-                                                  f'Ustawiono liczbę śmierci na bossie na: {self.deaths_boss}')
-                            except ValueError:
-                                self.send_privmsg(message.channel,
-                                                  f'@{message.user} Coś się zjebało okok oznacz mnie i napisz co jest 5')
-
-                elif message.text.startswith('!startboss'):
+            elif message.text.startswith('!setbossdeaths'):
+                if self.boss_active:
                     command_parts = message.text.split()
-                    self.deaths_boss = 0
                     if len(command_parts) >= 2:
-                        if current_time - self.last_start_boss_time >= self.death_command_cooldown:
-                            try:
-                                self.boss_start_time = time.time()
-                                self.boss_timer_file = '00:00:00'
-                                self.boss_name = str(command_parts[1])
-                                self.send_privmsg(message.channel, f'Boss: {self.boss_name}')
-                                self.boss_active = True
-                                self.stopped_boss = False
-                            except ValueError:
-                                print("Zjebało się")
-                            self.last_start_boss_time = current_time
+                        try:
+                            self.deaths_boss = int(command_parts[1])
+                            self.send_privmsg(message.channel,
+                                              f'Ustawiono liczbę śmierci na bossie na: {self.deaths_boss}')
+                        except ValueError:
+                            self.send_privmsg(message.channel,
+                                              f'@{message.user} Coś się zjebało {random.choice(self.emotes)} oznacz mnie i napisz co jest 5')
 
-                elif message.text_command == '!finishboss':
-                    if self.boss_active:
-                        if current_time - self.last_stop_boss_time >= self.death_command_cooldown:
-                            boss_stop_time = time.time()
-                            time_difference_seconds = round(boss_stop_time - self.boss_start_time)
-                            time_difference = timedelta(seconds=time_difference_seconds)
-                            time_delta_from_string = datetime.strptime(self.boss_timer_file,
-                                                                       '%H:%M:%S') - datetime.strptime(
-                                '00:00:00', '%H:%M:%S')
-                            self.boss_timer = time_difference + time_delta_from_string
-                            self.send_privmsg(message.channel, f'{self.boss_name} rozjebany z {self.deaths_boss} '
-                                                               f'wyjebkami po {str(self.boss_timer)} PogChomp')
-                            self.boss_active = False
-                            self.boss_name = ' '
-                            self.deaths_boss = ' '
-                            self.boss_timer = ' '
-                            self.last_stop_boss_time = current_time
-                    else:
-                        self.send_privmsg(message.channel, f'Nie ma ustawionego bossa hm')
+            elif message.text.startswith('!startboss'):
+                command_parts = message.text.split()
+                self.deaths_boss = 0
+                if len(command_parts) >= 2:
+                    if current_time - self.last_start_boss_time >= self.command_cooldown:
+                        try:
+                            self.boss_start_time = time.time()
+                            self.boss_timer_file = '00:00:00'
+                            self.boss_name = str(command_parts[1])
+                            self.send_privmsg(message.channel, f'Boss: {self.boss_name} {random.choice(self.emotes)}')
+                            self.boss_active = True
+                            self.boss_stopped = False
+                        except ValueError:
+                            print("Zjebało się")
+                        self.last_start_boss_time = current_time
 
-                elif message.text_command == '!stopboss':
-                    if self.boss_active:
-                        if current_time - self.last_stop_boss_time >= self.death_command_cooldown:
-                            self.stopped_boss = True
-                            self.send_privmsg(message.channel, f'{message.channel} się zmęczył po {self.deaths_boss} '
-                                                               f'wyjebkach xdd')
-                            self.last_stop_boss_time = current_time
-                    else:
-                        self.send_privmsg(message.channel, f'Nie ma ustawionego bossa hm')
+            elif message.text_command == '!finishboss':
+                if self.boss_active:
+                    if current_time - self.last_stop_boss_time >= self.command_cooldown:
+                        boss_stop_time = time.time()
+                        time_difference_seconds = round(boss_stop_time - self.boss_start_time)
+                        time_difference = timedelta(seconds=time_difference_seconds)
+                        time_delta_from_string = datetime.strptime(self.boss_timer_file,
+                                                                   '%H:%M:%S') - datetime.strptime(
+                            '00:00:00', '%H:%M:%S')
+                        self.boss_timer = time_difference + time_delta_from_string
+                        self.send_privmsg(message.channel, f'{self.boss_name} rozjebany z {self.deaths_boss} '
+                                                           f'wyjebkami po {str(self.boss_timer)} {random.choice(self.emotes)}')
+                        self.boss_active = False
+                        self.boss_name = ' '
+                        self.deaths_boss = ' '
+                        self.boss_timer = ' '
+                        self.last_stop_boss_time = current_time
+                else:
+                    self.send_privmsg(message.channel, f'Nie ma ustawionego bossa hm')
 
-                elif message.text_command == '!resumeboss':
-                    if self.boss_active and self.stopped_boss:
-                        if current_time - self.last_resume_boss_time >= self.death_command_cooldown:
-                            try:
-                                self.read_data_from_file()
-                                self.stopped_boss = False
-                                self.boss_start_time = time.time()
-                                self.send_privmsg(message.channel, f'Boss: {self.boss_name} wznowiony')
-                            except ValueError:
-                                print("Zjebało się")
-                            self.last_resume_boss_time = current_time
+            elif message.text_command == '!stopboss':
+                if self.boss_active:
+                    if current_time - self.last_stop_boss_time >= self.command_cooldown:
+                        self.boss_stopped = True
+                        self.send_privmsg(message.channel,
+                                          f'@{message.user} {message.channel} się zmęczył po {self.deaths_boss} '
+                                          f'wyjebkach {random.choice(self.emotes)}')
+                        self.last_stop_boss_time = current_time
+                        try:
+                            self.read_data_from_file()
+                        except ValueError:
+                            print("Zjebało się")
+                else:
+                    self.send_privmsg(message.channel, f'Nie ma ustawionego bossa hm')
 
-                elif message.text_command == '!help':
-                    self.send_privmsg(message.channel, 'Są takie komendy: '
-                                                       '!deaths (dla wszystkich) - wyświetla aktualną liczbę śmierci, '
-                                                       '!death+ (mod/vip/wic) - dodaje 1 do licznika, '
-                                                       '!death- (mod/vip/wic) - odejmuje 1 od licznika, '
-                                                       '!setdeaths {liczba} (mod/vip/wic) - zmienia liczbę śmierci, '
-                                                       '!startboss {nazwa_bossa} (mod/vip/wic) - rozpoczyna bossa, '
-                                                       '!finishboss (mod/vip/wic) - kończy bossa, '
-                                                       '!stopboss (mod/vip/wic) - pauzuje bossa, '
-                                                       '!setbossdeaths {liczba} (mod/vip/wic) - zmienia liczbę śmierci bossa')
+            elif message.text_command == '!resumeboss':
+                if self.boss_active and self.boss_stopped:
+                    if current_time - self.last_resume_boss_time >= self.command_cooldown:
+                        try:
+                            self.read_data_from_file()
+                            self.boss_stopped = False
+                            self.boss_start_time = time.time()
+                            self.send_privmsg(message.channel, f'@{message.user} Boss: {self.boss_name} wznowiony {random.choice(self.emotes)}')
+                        except ValueError:
+                            print("Zjebało się")
+                        self.last_resume_boss_time = current_time
+                else:
+                    self.send_privmsg(message.channel, f'Nie ma ustawionego bossa hm')
+
+            elif message.text_command == '!help':
+                self.send_privmsg(message.channel, '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ '
+                                                   'Są takie komendy:⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀  '
+                                                   '⠀⠀⠀⠀!deaths - wyświetla aktualną liczbę śmierci, '
+                                                   '⠀⠀⠀⠀!death+ - dodaje 1 do licznika,⠀⠀⠀⠀⠀⠀⠀⠀ '
+                                                   '⠀⠀⠀⠀!death- - odejmuje 1 od licznika, '
+                                                   '⠀⠀⠀⠀!setdeaths {liczba} - zmienia liczbę śmierci, '
+                                                   '⠀⠀⠀⠀!startboss {nazwa} - rozpoczyna bossa, '
+                                                   '⠀⠀⠀⠀!finishboss - kończy bossa,⠀⠀⠀⠀  '
+                                                   '⠀⠀⠀⠀!stopboss - pauzuje bossa, '
+                                                   '⠀⠀⠀⠀!setbossdeaths {liczba} - zmienia śmierci ⠀⠀⠀⠀⠀⠀⠀⠀bossa⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ '
+                                                   '⠀⠀⠀⠀!resumeboss - wznawia bossa')
 
     def loop_for_messages(self):
         while self._connected:
@@ -312,42 +324,55 @@ class TwitchBot(TwitchIrc):
 
     def read_data_from_file(self):
         try:
-            with open(tb.name_file, 'r') as file:
+            with open(self.name_file, 'r') as file:
                 data = file.read().splitlines()
                 if len(data) == 1:
-                    self.deaths = int(data[0])
+                    temp = data[0].split(" ")
+                    self.deaths = int(temp[1])
 
-                elif len(data) == 4:
-                    self.deaths = int(data[0])
-                    self.boss_name = data[1]
-                    if data[1] != ' ':
-                        self.boss_active = True
-                        self.stopped_boss = True
+                elif len(data) == 5:
+                    temp = data[0].split(" ")
+                    self.deaths = int(temp[1])
+                    temp = data[2].split(" ")
+                    self.boss_name = temp[1]
                     if data[2] != ' ':
-                        self.deaths_boss = int(data[2])
+                        self.boss_active = True
+                        self.boss_stopped = True
                     if data[3] != ' ':
-                        self.boss_timer_file = data[3]
+                        temp = data[3].split(" ")
+                        self.deaths_boss = int(temp[1])
+                    if data[4] != ' ':
+                        temp = data[4].split(" ")
+                        self.boss_timer_file = str(temp[1])
                 else:
-                    print(f'Error: Incorrect data format in file {tb.name_file}.')
+                    print(f'Error: Incorrect data format in file {self.name_file}.')
         except FileNotFoundError:
-            print(f'Error: File {tb.name_file} not found.')
+            print(f'Error: File {self.name_file} not found.')
 
     def write_data_to_file(self):
-        if self.boss_active and self.stopped_boss is False:
+        if self.boss_active and self.boss_stopped is False:
             time_difference_seconds = round(time.time() - self.boss_start_time)
             time_difference = timedelta(seconds=time_difference_seconds)
             time_delta_from_string = datetime.strptime(self.boss_timer_file, '%H:%M:%S') - datetime.strptime('00:00:00',
                                                                                                              '%H:%M:%S')
             self.boss_timer = time_difference + time_delta_from_string
+        elif self.boss_active and self.boss_stopped:
+            self.boss_timer = datetime.strptime(self.boss_timer_file, '%H:%M:%S') - datetime.strptime('00:00:00',
+                                                                                                      '%H:%M:%S')
         try:
             with open(self.name_file, 'w') as file:
-                file.write(f'{self.deaths}\n{self.boss_name}\n{self.deaths_boss}\n{self.boss_timer}')
+                if self.boss_active or self.boss_stopped:
+                    file.write(
+                        f'śmierci: {self.deaths}\n\nboss: {self.boss_name}\nśmierci: {self.deaths_boss}\nczas: {self.boss_timer}')
+                else:
+                    file.write(
+                        f'śmierci: {self.deaths}\n\n \n \n ')
         except FileNotFoundError:
             print(f'Error: File {self.name_file} not found.')
 
     def open(self):
         self.create_file_if_not_exists(self.name_file)
-        self.read_data_from_file()
+
         self.connect()
         self.loop_for_messages()
 
@@ -355,7 +380,7 @@ class TwitchBot(TwitchIrc):
 def write_data_thread():
     while True:  # Pętla, aby wątek działał ciągle (możesz dostosować logicznie)
         tb.write_data_to_file()
-        time.sleep(1)  # Przykładowy interwał
+        time.sleep(0.5)  # Przykładowy interwał
 
 
 if __name__ == '__main__':
