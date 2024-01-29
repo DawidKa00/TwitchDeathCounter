@@ -380,7 +380,7 @@ class TwitchBot(TwitchIrc):
 def write_data_thread():
     while True:  # Pętla, aby wątek działał ciągle (możesz dostosować logicznie)
         tb.write_data_to_file()
-        time.sleep(0.5)  # Przykładowy interwał
+        time.sleep(10)  # Przykładowy interwał
 
 
 if __name__ == '__main__':
