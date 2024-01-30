@@ -39,15 +39,16 @@ class TwitchBot(TwitchIrc):
         self.boss_timer_file = ' '
         self.last_death_plus_time = 0
         self.last_death_minus_time = 0
-        self.command_cooldown = 1
+        self.command_cooldown = 15
         self.last_stop_boss_time = 0
         self.last_start_boss_time = 0
         self.last_set_deaths_time = 0
         self.last_resume_boss_time = 0
-        self.users = ['fiz0waty_', 'overpow', 'krwawyy', 'apsik', 'seve__', 'sakyuu', 'aiszjaa', 'mhadox_',
-                      'superjez', 'kebes95', 'martozaur', 'elkabaczek', 'vusapion']
+        self.auto_message_time = 300
+        self.users = [self.channel, 'krwawyy']
         self.name_file = self.channel + '.txt'
-        self.emotes = ['aha9', 'aha1000', "HAHAHA", "beka", "alejaja" "gachiRoll", "duch", "buh", "xdd", "xpp", "trup"]
+        self.emotes = ['aha9', 'aha1000', "HAHAHA", "beka", "alejaja", "gachiRoll", "duch", "buh", "xdd", "xpp", "trup",
+                       "blushh", "owo", "owoCheer", "Evilowo"]
 
     def send_privmsg(self, channel, text):
         self.send_command(f'PRIVMSG #{channel} :{text}')
@@ -292,7 +293,7 @@ class TwitchBot(TwitchIrc):
                     self.send_privmsg(message.channel, f'Nie ma ustawionego bossa hm')
 
             elif message.text_command == '!help':
-                self.send_privmsg(message.channel, '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ '
+                self.send_privmsg(message.channel, '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ ⠀ ⠀ ⠀ ⠀⠀⠀ '
                                                    'Są takie komendy:⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀  '
                                                    '⠀⠀⠀⠀!deaths - wyświetla aktualną liczbę śmierci, '
                                                    '⠀⠀⠀⠀!death+ - dodaje 1 do licznika,⠀⠀⠀⠀⠀⠀⠀⠀ '
@@ -378,9 +379,15 @@ class TwitchBot(TwitchIrc):
 
 
 def write_data_thread():
-    while True:  # Pętla, aby wątek działał ciągle (możesz dostosować logicznie)
+    sec = 0
+    while True:
         tb.write_data_to_file()
-        time.sleep(0.5)  # Przykładowy interwał
+        time.sleep(0.5)
+        if sec >= tb.auto_message_time:
+            tb.send_privmsg(tb.channel, "Wpisujcie '!death+', aby zwiększyć licznik bota bo dziadek zapomina okok ,"
+                                        f" istnieje też komenda !help w której są wypisane wszystkie komendy! {random.choice(tb.emotes)}")
+            sec = 0
+        sec += 0.5
 
 
 if __name__ == '__main__':
