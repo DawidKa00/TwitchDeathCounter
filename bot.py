@@ -39,7 +39,7 @@ class TwitchBot(TwitchIrc):
         self.boss_timer_file = ' '
         self.last_death_plus_time = 0
         self.last_death_minus_time = 0
-        self.command_cooldown = 1
+        self.command_cooldown = 15
         self.last_stop_boss_time = 0
         self.last_start_boss_time = 0
         self.last_set_deaths_time = 0
@@ -47,7 +47,7 @@ class TwitchBot(TwitchIrc):
         self.users = ['fiz0waty_', 'overpow', 'krwawyy', 'apsik', 'seve__', 'sakyuu', 'aiszjaa', 'mhadox_',
                       'superjez', 'kebes95', 'martozaur', 'elkabaczek', 'vusapion']
         self.name_file = self.channel + '.txt'
-        self.emotes = ['aha9', 'aha1000', "HAHAHA", "beka", "alejaja" "gachiRoll", "duch", "buh", "xdd", "xpp", "trup"]
+        self.emotes = ['aha9', 'aha1000', "HAHAHA", "beka", "alejaja", "gachiRoll", "duch", "buh", "xdd", "xpp", "trup"]
 
     def send_privmsg(self, channel, text):
         self.send_command(f'PRIVMSG #{channel} :{text}')
