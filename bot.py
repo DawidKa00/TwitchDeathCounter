@@ -21,15 +21,14 @@ Message = namedtuple(
 class TwitchBot(TwitchIrc):
     __instance = None
 
-    def __init__(self, channel):
-
+    def __init__(self):
         self._connected = False
         self.irc_server = 'irc.twitch.tv'
         self.irc_port = 6667
         self.irc = socket.socket()
         self.oauth_token = os.getenv("OAUTH_TOKEN")
         self.username = os.getenv("USER_NAME")
-        self.channel = channel
+        self.channel = ''
         self.deaths = 0
         self.deaths_boss = ' '
         self.boss_active = False
@@ -45,6 +44,7 @@ class TwitchBot(TwitchIrc):
         self.last_start_boss_time = 0
         self.last_set_deaths_time = 0
         self.last_resume_boss_time = 0
+        self.settings = {}
         self.spambot_cooldown = 300
         self.name_file = self.channel + '.txt'
         self.spam_bot_enabled = True
@@ -202,8 +202,6 @@ class TwitchBot(TwitchIrc):
                 self.send_privmsg(message.channel, 'Zostałem stworzony przez Krwawyy, z propozycjami lub błędami pisz na pw na Twitchu '
                                                    'okok , jakbyś chciał coś dodać napisz to wyśle link do GitHuba wuda')
 
-            # if message.user.lower() in self.users and message.channel.lower() == message.channel.lower() or self.parse_badge(
-            #         message.badge_info):
             if (
                     self.all_users_mod or
                     (not self.all_users_mod and self.white_list_enabled and message.user.lower() in self.white_list) or
@@ -213,7 +211,6 @@ class TwitchBot(TwitchIrc):
             ):
                 if self.black_list_enabled and message.user.lower() in self.black_list:
                     return
-                print(message)
                 current_time = time.time()
                 if message.text_command == '!death+':
                     if current_time - self.last_death_plus_time >= self.command_cooldown:
@@ -396,24 +393,23 @@ class TwitchBot(TwitchIrc):
         except FileNotFoundError:
             print(f'Error: File {self.name_file} not found.')
 
-    @staticmethod
-    def create_or_load_settings():
+    def create_or_load_settings(self):
         settings_file_name = 'settings.yaml'
         yaml = YAML()
         try:
             with open(settings_file_name, 'r', encoding='utf-8') as file:
-                settings = yaml.load(file)
+                self.settings = yaml.load(file)
                 print(f'File {settings_file_name} already exists. Loaded existing settings.')
-                return settings
+                return
         except FileNotFoundError:
             default_settings = {
                 'channel': 'krwawyy',
                 'spam_bot_enabled': True,
                 'spambot_cooldown': 300,
-                'white_list_enabled': False,
-                'white_list': ['krwawyy'],
+                'white_list_enabled': True,
+                'white_list': ['krwawyy', 'arquel'],
                 'black_list_enabled': False,
-                'black_list': ['krwawyy', 'overpow'],
+                'black_list': ['nick'],
                 'emotes': ["aha9", "aha1000", "HAHAHA", "beka", "alejaja", "gachiRoll", "duch", "buh", "xdd", "xpp", "trup",
                            "blushh", "owo", "owoCheer", "Evilowo"],
                 'command_cooldown': 15,
@@ -436,36 +432,36 @@ class TwitchBot(TwitchIrc):
 
             with open(settings_file_name, 'w', encoding='utf-8') as file:
                 yaml.dump(default_settings, file)
-                print(f'File {settings_file_name} created with default settings.')
-                return default_settings
+                print(f'File {settings_file_name} created with default settings.'
+                      f'\nGo ahead and edit it!')
+                self.settings = default_settings
+                exit(0)
         except Exception:
             print('Błąd, usuń plik settings.yaml i spróbuj ponownie')
 
-    def apply_settings_from_file(self, settings):
-        self.channel = settings['channel']
-        self.spam_bot_enabled = settings['spam_bot_enabled']
-        self.spambot_cooldown = settings['spambot_cooldown']
+    def apply_settings_from_file(self):
+        self.channel = self.settings['channel']
+        self.spam_bot_enabled = self.settings['spam_bot_enabled']
+        self.spambot_cooldown = self.settings['spambot_cooldown']
 
-        if bool(settings['white_list']):
-            self.white_list_enabled = settings['white_list_enabled']
-            self.white_list = settings['white_list']
+        if bool(self.settings['white_list']):
+            self.white_list_enabled = self.settings['white_list_enabled']
+            self.white_list = self.settings['white_list']
         else:
             self.white_list_enabled = False
-        if bool(settings['black_list']):
-            self.black_list_enabled = settings['black_list_enabled']
-            self.black_list = settings['black_list']
+        if bool(self.settings['black_list']):
+            self.black_list_enabled = self.settings['black_list_enabled']
+            self.black_list = self.settings['black_list']
         else:
             self.black_list_enabled = False
-        self.emotes = settings['emotes']
-        self.command_cooldown = settings['command_cooldown']
-        self.all_users_mod = settings['all_users_mod']
-        self.bot_moderators = settings['bot_moderators']
+        self.emotes = self.settings['emotes']
+        self.command_cooldown = self.settings['command_cooldown']
+        self.all_users_mod = self.settings['all_users_mod']
+        self.bot_moderators = self.settings['bot_moderators']
+        self.name_file = self.settings['channel']+'.txt'
 
     def open(self):
         self.create_db_file_if_not_exists(self.name_file)
-
-        settings = self.create_or_load_settings()
-        self.apply_settings_from_file(settings)
         self.connect()
         self.loop_for_messages()
 
@@ -484,10 +480,10 @@ def write_data_thread():
             sec += 0.5
 
 
-
 if __name__ == '__main__':
-    # tb = TwitchBot(input("Podaj nazwę kanału: "))
-    tb = TwitchBot('krwawyy')
+    tb = TwitchBot()
+    tb.create_or_load_settings()
+    tb.apply_settings_from_file()
     tb.read_data_from_file()
 
     write_data_thread = threading.Thread(target=write_data_thread)
