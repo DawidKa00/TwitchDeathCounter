@@ -52,8 +52,7 @@ class TwitchBot(TwitchIrc):
         self.white_list = []
         self.black_list_enabled = False
         self.black_list = []
-        self.emotes = ["aha9", "aha1000", "HAHAHA", "beka", "alejaja", "gachiRoll", "duch", "buh", "xdd", "xpp", "trup",
-                       "blushh", "owo", "owoCheer", "Evilowo"]
+        self.emotes = []
         self.all_users_mod = True
         self.bot_moderators = []
 
@@ -397,11 +396,12 @@ class TwitchBot(TwitchIrc):
         except FileNotFoundError:
             print(f'Error: File {self.name_file} not found.')
 
-    def create_or_load_settings(self):
+    @staticmethod
+    def create_or_load_settings():
         settings_file_name = 'settings.yaml'
         yaml = YAML()
         try:
-            with open(settings_file_name, 'r') as file:
+            with open(settings_file_name, 'r', encoding='utf-8') as file:
                 settings = yaml.load(file)
                 print(f'File {settings_file_name} already exists. Loaded existing settings.')
                 return settings
@@ -434,7 +434,7 @@ class TwitchBot(TwitchIrc):
             default_settings.yaml_add_eol_comment('Czy wszyscy użytkownicy mogą moderować bota: "!death+", "!death-", "!setdeaths", "!startboss", "!stopboss", "!finishboss", "!setbossdeaths"', key='all_users_mod')
             default_settings.yaml_add_eol_comment('Kto może moderować bota, możliwe opcje: "mod", "subscriber", "vip", "broadcaster"', key='bot_moderators')
 
-            with open(settings_file_name, 'w') as file:
+            with open(settings_file_name, 'w', encoding='utf-8') as file:
                 yaml.dump(default_settings, file)
                 print(f'File {settings_file_name} created with default settings.')
                 return default_settings
@@ -445,7 +445,6 @@ class TwitchBot(TwitchIrc):
         self.channel = settings['channel']
         self.spam_bot_enabled = settings['spam_bot_enabled']
         self.spambot_cooldown = settings['spambot_cooldown']
-
 
         if bool(settings['white_list']):
             self.white_list_enabled = settings['white_list_enabled']
