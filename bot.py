@@ -52,9 +52,12 @@ class TwitchBot(TwitchIrc):
         self.white_list = []
         self.black_list_enabled = False
         self.black_list = []
-        self.emotes = []
+        self.emotes = ["beka", "trup"]
         self.all_users_mod = True
         self.bot_moderators = []
+        self.spam_bot_messages = 50
+        self.spam_bot_message = ""
+        self.message_count = 0
 
     def send_privmsg(self, channel, text):
         self.send_command(f'PRIVMSG #{channel} :{text}')
@@ -185,8 +188,8 @@ class TwitchBot(TwitchIrc):
                                       f'@{message.user} {message.channel} wypierdolił się już {self.deaths} razy {random.choice(self.emotes)}')
 
             elif message.text_command == '!help':
-                self.send_privmsg(message.channel, '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ ⠀ ⠀ ⠀ ⠀⠀⠀  '
-                                                   'Są takie komendy:⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ '
+                self.send_privmsg(message.channel, '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ ⠀ ⠀ ⠀ ⠀⠀⠀⠀  '
+                                                   'Są takie komendy:⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ '
                                                    '⠀⠀⠀⠀!deaths - wyświetla aktualną liczbę śmierci, '
                                                    '⠀⠀⠀⠀!death+ - dodaje 1 do licznika,⠀⠀⠀⠀⠀⠀⠀⠀ '
                                                    '⠀⠀⠀⠀!death- - odejmuje 1 od licznika, '
@@ -199,8 +202,13 @@ class TwitchBot(TwitchIrc):
                                                    '⠀⠀⠀⠀!setbossdeaths {liczba} - zmienia śmierci ⠀⠀⠀⠀⠀⠀⠀⠀bossa')
 
             elif message.text_command == '!author':
-                self.send_privmsg(message.channel, 'Zostałem stworzony przez Krwawyy, z propozycjami lub błędami pisz na pw na Twitchu '
-                                                   'okok , jakbyś chciał coś dodać napisz to wyśle link do GitHuba wuda')
+                self.send_privmsg(message.channel,
+                                  'Zostałem stworzony przez Krwawyy, z propozycjami lub błędami pisz na pw na Twitchu '
+                                  'okok , jakbyś chciał coś dodać napisz to wyśle link do GitHuba wuda')
+
+            # elif message.text_command == '!malenia':
+            #     self.send_privmsg(message.channel,
+            #                       f'@{message.user} Malenia rozjebana z 94 wyjebkami po 3:19:06 blushh ')
 
             if (
                     self.all_users_mod or
@@ -222,24 +230,30 @@ class TwitchBot(TwitchIrc):
                             self.send_privmsg(message.channel,
                                               f'{self.deaths_boss} wyjebek na bossie i {self.deaths} ugółem {random.choice(self.emotes)}')
                         else:
-                            self.send_privmsg(message.channel, f'Wypierdolki: {self.deaths} {random.choice(self.emotes)}')
+                            self.send_privmsg(message.channel,
+                                              f'Wypierdolki: {self.deaths} {random.choice(self.emotes)}')
                         self.last_death_plus_time = current_time
 
                 elif message.text.startswith('!startboss'):
-                    command_parts = message.text.split()
-                    self.deaths_boss = 0
-                    if len(command_parts) >= 2:
-                        if current_time - self.last_start_boss_time >= self.command_cooldown:
-                            try:
-                                self.boss_start_time = time.time()
-                                self.boss_timer_file = '00:00:00'
-                                self.boss_name = str(command_parts[1])
-                                self.send_privmsg(message.channel, f'Boss: {self.boss_name} {random.choice(self.emotes)}')
-                                self.boss_active = True
-                                self.boss_stopped = False
-                            except ValueError:
-                                print("Zjebało się")
-                            self.last_start_boss_time = current_time
+                    if not self.boss_active and not self.boss_stopped:
+                        command_parts = message.text.split()
+                        self.deaths_boss = 0
+                        if len(command_parts) >= 2:
+                            if current_time - self.last_start_boss_time >= self.command_cooldown:
+                                try:
+                                    self.boss_start_time = time.time()
+                                    self.boss_timer_file = '00:00:00'
+                                    self.boss_name = str(command_parts[1])
+                                    self.send_privmsg(message.channel,
+                                                      f'Boss: {self.boss_name} {random.choice(self.emotes)}')
+                                    self.boss_active = True
+                                    self.boss_stopped = False
+                                except ValueError:
+                                    print("Zjebało się")
+                                self.last_start_boss_time = current_time
+                    else:
+                        self.send_privmsg(message.channel,
+                                          f'@{message.user} Boss jest zastopowany: {self.boss_name} zakończ go wpisując "!finishboss" przed zaczęciem nowego {random.choice(self.emotes)}')
 
                 elif message.text_command == '!finishboss':
                     if self.boss_active:
@@ -254,6 +268,7 @@ class TwitchBot(TwitchIrc):
                             self.send_privmsg(message.channel, f'{self.boss_name} rozjebany z {self.deaths_boss} '
                                                                f'wyjebkami po {str(self.boss_timer)} {random.choice(self.emotes)}')
                             self.boss_active = False
+                            self.boss_stopped = False
                             self.boss_name = ' '
                             self.deaths_boss = ' '
                             self.boss_timer = ' '
@@ -267,11 +282,13 @@ class TwitchBot(TwitchIrc):
                         if self.boss_active and self.boss_stopped is False:
                             if self.deaths_boss == ' ':
                                 self.deaths_boss = 0
-                            if self.deaths_boss > 0: self.deaths_boss -= 1
+                            if self.deaths_boss > 0:
+                                self.deaths_boss -= 1
                             self.send_privmsg(message.channel,
                                               f'{self.deaths_boss} wyjebek na bossie i {self.deaths} ugółem {random.choice(self.emotes)}')
                         else:
-                            self.send_privmsg(message.channel, f'Wypierdolki: {self.deaths} {random.choice(self.emotes)}')
+                            self.send_privmsg(message.channel,
+                                              f'Wypierdolki: {self.deaths} {random.choice(self.emotes)}')
                         self.last_death_minus_time = current_time
 
                 elif message.text.startswith('!setdeaths'):
@@ -280,7 +297,8 @@ class TwitchBot(TwitchIrc):
                         if current_time - self.last_set_deaths_time >= self.command_cooldown:
                             try:
                                 self.deaths = int(command_parts[1])
-                                self.send_privmsg(message.channel, f'Ustawiono liczbę śmierci na: {self.deaths} {random.choice(self.emotes)}')
+                                self.send_privmsg(message.channel,
+                                                  f'Ustawiono liczbę śmierci na: {self.deaths} {random.choice(self.emotes)}')
                             except ValueError:
                                 self.send_privmsg(message.channel,
                                                   f'@{message.user} Coś się zjebało {random.choice(self.emotes)} napisz do Krwawyy z błędem')
@@ -320,12 +338,21 @@ class TwitchBot(TwitchIrc):
                                 self.read_data_from_file()
                                 self.boss_stopped = False
                                 self.boss_start_time = time.time()
-                                self.send_privmsg(message.channel, f'@{message.user} Boss: {self.boss_name} wznowiony {random.choice(self.emotes)}')
+                                self.send_privmsg(message.channel,
+                                                  f'@{message.user} Boss: {self.boss_name} wznowiony {random.choice(self.emotes)}')
                             except ValueError:
                                 print("Zjebało się")
                             self.last_resume_boss_time = current_time
                     else:
                         self.send_privmsg(message.channel, f'Nie ma ustawionego bossa hm')
+
+                else:
+                    if self.spam_bot_enabled:
+                        if self.message_count >= self.spam_bot_messages:
+                            self.send_privmsg(self.channel,
+                                              self.spam_bot_message + " " + random.choice(self.emotes))
+                            self.message_count = 0
+                        self.message_count += 1
 
     def loop_for_messages(self):
         while self._connected:
@@ -334,11 +361,10 @@ class TwitchBot(TwitchIrc):
                 for received_msg in received_msgs.split('\r\n'):
                     self.handle_message(received_msg)
             except Exception as e:
-                print(e)
-                self._connected = False
+                print("się zjebało", e)
 
     @staticmethod
-    def create_db_file_if_not_exists(file_name):
+    def create_txt_file_if_not_exists(file_name):
         try:
             with open(file_name, 'x', encoding='utf-8') as file:
                 print(f'File {file_name} created successfully.')
@@ -405,13 +431,14 @@ class TwitchBot(TwitchIrc):
             default_settings = {
                 'channel': 'krwawyy',
                 'spam_bot_enabled': True,
-                'spambot_cooldown': 300,
+                'spam_bot_messages': 50,
+                'spam_bot_message': "Wpisujcie '!death+', aby zwiększyć licznik, istnieje też komenda '!help' w której są wypisane wszystkie komendy!",
                 'white_list_enabled': True,
                 'white_list': ['krwawyy', 'arquel'],
                 'black_list_enabled': False,
                 'black_list': ['nick'],
-                'emotes': ["aha9", "aha1000", "HAHAHA", "beka", "alejaja", "gachiRoll", "duch", "buh", "xdd", "xpp", "trup",
-                           "blushh", "owo", "owoCheer", "Evilowo"],
+                'emotes': ["aha9", "aha1000", "HAHAHA", "beka", "alejaja", "gachiRoll", "duch", "buh", "xdd", "xpp",
+                           "trup", "blushh", "owo", "owoCheer", "Evilowo"],
                 'command_cooldown': 15,
                 'all_users_mod': True,
                 'bot_moderators': ['mod', 'subscriber', 'vip', 'broadcaster']
@@ -419,16 +446,29 @@ class TwitchBot(TwitchIrc):
             }
             default_settings = comments.CommentedMap(default_settings)
             default_settings.yaml_add_eol_comment('Kanał na którym ma działać bot np. "krwawyy"', key='channel')
-            default_settings.yaml_add_eol_comment('Wyłącza lub włącza automatyczne wysyłanie wiadomości co spambot_cooldown', key='spam_bot_enabled')
-            default_settings.yaml_add_eol_comment('Czas co ile ma pisać wiadomość', key='spambot_cooldown')
-            default_settings.yaml_add_eol_comment('Czy whitelista ma być włączona (użytkownik wpisany na listę zawsze będzie mógł moderować bota)', key='white_list_enabled')
+            default_settings.yaml_add_eol_comment(
+                'Wyłącza lub włącza automatyczne wysyłanie wiadomości co spambot_cooldown', key='spam_bot_enabled')
+            default_settings.yaml_add_eol_comment('Czas co ile wiadomości ma wysyłać wiadomość',
+                                                  key='spam_bot_messages')
+            default_settings.yaml_add_eol_comment('Wiadomość wysyłana co x wiadomości', key='spam_bot_message')
+            default_settings.yaml_add_eol_comment(
+                'Czy whitelista ma być włączona (użytkownik wpisany na listę zawsze będzie mógł moderować bota)',
+                key='white_list_enabled')
             default_settings.yaml_add_eol_comment('Lista użytkowników na whiteliscie', key='white_list')
-            default_settings.yaml_add_eol_comment('Czy blacklista ma być włączona (użytkownik wpisany na listę nie będzie mógł moderować bota)', key='black_list_enabled')
+            default_settings.yaml_add_eol_comment(
+                'Czy blacklista ma być włączona (użytkownik wpisany na listę nie będzie mógł moderować bota)',
+                key='black_list_enabled')
             default_settings.yaml_add_eol_comment('Lista użytkowników na blackliscie', key='black_list')
             default_settings.yaml_add_eol_comment('Losowe emotki dodawane w wiadomościach', key='emotes')
-            default_settings.yaml_add_eol_comment('Cooldown na wiadomości, np. 15 oznacza, że przez 15 sekund po napisaniu np. "!death+" kolejne wywołania komendy nie zadziałają', key='command_cooldown')
-            default_settings.yaml_add_eol_comment('Czy wszyscy użytkownicy mogą moderować bota: "!death+", "!death-", "!setdeaths", "!startboss", "!stopboss", "!finishboss", "!setbossdeaths"', key='all_users_mod')
-            default_settings.yaml_add_eol_comment('Kto może moderować bota, możliwe opcje: "mod", "subscriber", "vip", "broadcaster"', key='bot_moderators')
+            default_settings.yaml_add_eol_comment(
+                'Cooldown na wiadomości, np. 15 oznacza, że przez 15 sekund po napisaniu np. "!death+" kolejne wywołania komendy nie zadziałają',
+                key='command_cooldown')
+            default_settings.yaml_add_eol_comment(
+                'Czy wszyscy użytkownicy mogą moderować bota: "!death+", "!death-", "!setdeaths", "!startboss", "!stopboss", "!finishboss", "!setbossdeaths"',
+                key='all_users_mod')
+            default_settings.yaml_add_eol_comment(
+                'Kto może moderować bota, możliwe opcje: "mod", "subscriber", "vip", "broadcaster"',
+                key='bot_moderators')
 
             with open(settings_file_name, 'w', encoding='utf-8') as file:
                 yaml.dump(default_settings, file)
@@ -442,8 +482,8 @@ class TwitchBot(TwitchIrc):
     def apply_settings_from_file(self):
         self.channel = self.settings['channel']
         self.spam_bot_enabled = self.settings['spam_bot_enabled']
-        self.spambot_cooldown = self.settings['spambot_cooldown']
-
+        self.spam_bot_messages = self.settings['spam_bot_messages']
+        self.spam_bot_message = self.settings['spam_bot_message']
         if bool(self.settings['white_list']):
             self.white_list_enabled = self.settings['white_list_enabled']
             self.white_list = self.settings['white_list']
@@ -458,26 +498,17 @@ class TwitchBot(TwitchIrc):
         self.command_cooldown = self.settings['command_cooldown']
         self.all_users_mod = self.settings['all_users_mod']
         self.bot_moderators = self.settings['bot_moderators']
-        self.name_file = self.settings['channel']+'.txt'
+        self.name_file = self.settings['channel'] + '.txt'
 
     def open(self):
-        self.create_db_file_if_not_exists(self.name_file)
+        self.create_txt_file_if_not_exists(self.name_file)
         self.connect()
-        self.loop_for_messages()
 
 
 def write_data_thread():
-    sec = 0
     while True:
         tb.write_data_to_file()
         time.sleep(0.5)
-        if tb.spam_bot_enabled:
-            if sec >= tb.spambot_cooldown:
-                tb.send_privmsg(tb.channel, "Wpisujcie '!death+', aby zwiększyć licznik bota bo dziadek zapomina okok ,"
-                                            f" istnieje też komenda !help w której są wypisane wszystkie komendy! {random.choice(tb.emotes)}"
-                                            f" gdyby dziadek włączył tego bota u siebie to licznik zmieniał by się na bieżąco xddShrug")
-                sec = 0
-            sec += 0.5
 
 
 if __name__ == '__main__':
