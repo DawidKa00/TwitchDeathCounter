@@ -23,6 +23,10 @@ class TwitchBot(TwitchIrc):
     __instance = None
 
     def __init__(self):
+        self.temp_timer = None
+        self.temp_deaths = None
+        self.temp_boss_deaths = None
+        self.temp_boss = None
         self.prefix = None
         self.extra_command_2_text = None
         self.extra_command_2 = None
@@ -67,6 +71,7 @@ class TwitchBot(TwitchIrc):
         self.spam_bot_messages = 50
         self.spam_bot_message = ""
         self.message_count = 0
+        self.finished = False
 
     def send_privmsg(self, channel, text):
         self.send_command(f'PRIVMSG #{channel} :{text}')
@@ -214,9 +219,6 @@ class TwitchBot(TwitchIrc):
                                   'Zostałem stworzony przez Krwawyy, z propozycjami lub błędami pisz na pw na Twitchu '
                                   'okok , jakbyś chciał coś dodać napisz to wyśle link do GitHuba wuda')
 
-            # elif message.text_command == '!malenia':
-            #     self.send_privmsg(message.channel,
-            #                       f'@{message.user} Malenia rozjebana z 94 wyjebkami po 3:19:06 blushh ')
             else:
                 if (
                         self.all_users_mod or
@@ -265,7 +267,7 @@ class TwitchBot(TwitchIrc):
                                         self.boss_stopped = False
                                         logging.info(f"{datetime.now()} > {message.user}: {message.text} - deaths: {self.deaths}{', boss_name: 'if self.boss_name != ' ' and self.boss_name != '' else ''}{self.boss_name}{', boss_deaths: ' if self.deaths_boss!=' ' else ''}{self.deaths_boss}")
                                     except ValueError as e:
-                                        print("Zjebało się")
+                                        print("Zepsuło się")
                                         logging.error(e)
                                     self.last_start_boss_time = current_time
                         elif self.boss_active:
@@ -293,8 +295,12 @@ class TwitchBot(TwitchIrc):
                                                                    f'wyjebkami po {str(self.boss_timer)} {random.choice(self.emotes)}')
                                 logging.info(
                                     f"{datetime.now()} > {message.user}: {message.text} - deaths: {self.deaths}{', boss_name: ' if self.boss_name != ' ' and self.boss_name != '' else ''}{self.boss_name}{', boss_deaths: ' if self.deaths_boss != ' ' else ''}{self.deaths_boss} {str(self.boss_timer)} ")
+                                self.finished = True
                                 self.boss_active = False
                                 self.boss_stopped = False
+                                self.temp_boss = self.boss_name
+                                self.temp_boss_deaths = self.deaths_boss
+                                self.temp_deaths = self.deaths
                                 self.boss_name = ' '
                                 self.deaths_boss = ' '
                                 self.boss_timer = ' '
@@ -332,7 +338,7 @@ class TwitchBot(TwitchIrc):
                                 except ValueError as e:
                                     logging.error(e)
                                     self.send_privmsg(message.channel,
-                                                      f'@{message.user} Coś się zjebało {random.choice(self.emotes)} napisz do Krwawyy z błędem')
+                                                      f'@{message.user} Coś się Zepsuło {random.choice(self.emotes)} napisz do Krwawyy z błędem "/w Krwawyy niedziała"')
                                 self.last_set_deaths_time = current_time
 
                     elif message.text.startswith(self.prefix + 'setbossdeaths'):
@@ -347,7 +353,7 @@ class TwitchBot(TwitchIrc):
                                     logging.info(f"{datetime.now()} > {message.user}: {message.text} - deaths: {self.deaths}{', boss_name: 'if self.boss_name != ' ' and self.boss_name != '' else ''}{self.boss_name}{', boss_deaths: ' if self.deaths_boss!=' ' else ''}{self.deaths_boss}")
                                 except ValueError as e:
                                     self.send_privmsg(message.channel,
-                                                      f'@{message.user} Coś się zjebało {random.choice(self.emotes)} oznacz mnie i napisz co jest 5')
+                                                      f'@{message.user} Coś się Zepsuło {random.choice(self.emotes)} oznacz mnie albo napisz priv "/w Krwawyy niedziała"')
                                     logging.error(e)
 
                     elif message.text_command == self.prefix + 'stopboss':
@@ -364,7 +370,7 @@ class TwitchBot(TwitchIrc):
                                     self.read_data_from_file()
                                 except ValueError as e:
                                     logging.error(e)
-                                    print("Zjebało się")
+                                    print("Zepsuło się")
                         else:
                             self.send_privmsg(message.channel, f'Nie ma ustawionego bossa hm')
 
@@ -381,12 +387,11 @@ class TwitchBot(TwitchIrc):
                                                       f'@{message.user} Boss: {self.boss_name} wznowiony {random.choice(self.emotes)}')
                                     logging.info(f"{datetime.now()} > {message.user}: {message.text} - deaths: {self.deaths}{', boss_name: 'if self.boss_name != ' ' and self.boss_name != '' else ''}{self.boss_name}{', boss_deaths: ' if self.deaths_boss!=' ' else ''}{self.deaths_boss}")
                                 except ValueError as e:
-                                    logging.error()
-                                    print("Zjebało się")
+                                    logging.error(e)
+                                    print("Zepsuło się")
                                 self.last_resume_boss_time = current_time
                         else:
                             self.send_privmsg(message.channel, f'Nie ma ustawionego bossa hm')
-
                     else:
                         if self.spam_bot_enabled:
                             if self.message_count >= self.spam_bot_messages:
@@ -413,7 +418,7 @@ class TwitchBot(TwitchIrc):
                     self.handle_message(received_msg)
             except Exception as e:
                 logging.error(e)
-                print("się zjebało", e)
+                print("się Zepsuło", e)
 
     @staticmethod
     def create_txt_file_if_not_exists(file_name):
@@ -463,6 +468,7 @@ class TwitchBot(TwitchIrc):
             time_delta_from_string = datetime.strptime(self.boss_timer_file, '%H:%M:%S') - datetime.strptime('00:00:00',
                                                                                                              '%H:%M:%S')
             self.boss_timer = time_difference + time_delta_from_string
+            self.temp_timer = self.boss_timer
         elif self.boss_stopped:
             self.boss_timer = datetime.strptime(self.boss_timer_file, '%H:%M:%S') - datetime.strptime('00:00:00',
                                                                                                       '%H:%M:%S')
@@ -471,6 +477,9 @@ class TwitchBot(TwitchIrc):
                 if self.boss_active or self.boss_stopped:
                     file.write(
                         f'śmierci: {self.deaths}\n\nboss: {self.boss_name}\nśmierci: {self.deaths_boss}\nczas: {self.boss_timer}')
+                elif self.finished:
+                    file.write(
+                        f'śmierci: {self.temp_deaths}\n\nboss: {self.temp_boss} zabity!\nśmierci: {self.temp_boss_deaths}\nczas: {self.temp_timer}')
                 else:
                     file.write(
                         f'śmierci: {self.deaths}\n\n \n \n ')
@@ -592,10 +601,22 @@ class TwitchBot(TwitchIrc):
         self.create_txt_file_if_not_exists(self.name_file)
         self.connect()
 
+    def clearTemps(self):
+        self.temp_boss = ' '
+        self.temp_boss_deaths = ' '
+        self.temp_deaths = ' '
+        self.temp_timer = ' '
 
 def write_data_thread():
+    finished_timer = 0.0
     while True:
         tb.write_data_to_file()
+        if finished_timer < 10.0:
+            finished_timer += 0.5
+        else:
+            finished_timer = 0.0
+            tb.finished = False
+            tb.clearTemps()
         time.sleep(0.5)
 
 
