@@ -107,19 +107,18 @@ class CommandHandler:
 
     def show_help(self) -> str:
         """Pokaż dostępne komendy."""
-        return (f'⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ ⠀ ⠀ ⠀ ⠀⠀⠀⠀  '
-                f'Są takie komendy:⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ '
-                f'⠀⠀⠀⠀{self.config['prefix']}deaths - wyświetla aktualną liczbę śmierci, '
-                f'⠀⠀⠀⠀{self.config['prefix']}death+ - dodaje 1 do licznika,⠀⠀⠀⠀⠀⠀⠀⠀ '
-                f'⠀⠀⠀⠀{self.config['prefix']}death- - odejmuje 1 od licznika, '
-                f'⠀⠀⠀⠀{self.config['prefix']}setdeaths liczba - zmienia liczbę śmierci, '
-                f'⠀⠀⠀⠀{self.config['prefix']}startboss nazwa - rozpoczyna bossa, '
-                f'⠀⠀⠀⠀{self.config['prefix']}finishboss - kończy bossa,⠀⠀⠀⠀  '
-                f'⠀⠀⠀⠀{self.config['prefix']}pauseboss - pauzuje bossa,⠀⠀⠀⠀  '
-                f'⠀⠀⠀⠀{self.config['prefix']}resumeboss - wznawia bossa,⠀⠀⠀⠀  '
-                f'⠀⠀⠀⠀{self.config['prefix']}author - info o autorze,⠀⠀⠀⠀  '
-                f'⠀⠀⠀⠀{self.config['prefix']}setbossdeaths liczba - zmienia śmierci ⠀⠀⠀⠀⠀⠀⠀⠀bossa'
-                f'⠀⠀⠀⠀aktualnie jest {self.config['command_cooldown']} cd')
+        return (
+            f"Są dostępne komendy: {self.config['prefix']}deaths (liczba śmierci), "
+            f"{self.config['prefix']}death+ (dodaj 1), {self.config['prefix']}death- (odejmij 1), "
+            f"{self.config['prefix']}setdeaths liczba (ustaw liczbę śmierci), "
+            f"{self.config['prefix']}startboss nazwa (rozpocznij bossa), "
+            f"{self.config['prefix']}finishboss (zakończ bossa), "
+            f"{self.config['prefix']}pauseboss (pauza bossa), "
+            f"{self.config['prefix']}resumeboss (wznów bossa), "
+            f"{self.config['prefix']}setbossdeaths liczba (ustaw śmierci bossa), "
+            f"{self.config['prefix']}author (info o autorze). "
+            f"Cooldown: {self.config['command_cooldown']}s."
+        )
 
     @staticmethod
     def show_author() -> str:
