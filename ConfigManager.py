@@ -94,7 +94,10 @@ class ConfigManager:
 
         self.config = default_config
         self.save_config()
+        print(f"Created default configuration file: {self.config_file}")
         self.logger.info(f"Created default configuration file: {self.config_file}")
+        print(f"Edit configuration file: {self.config_file} and start again.")
+        exit(1)
 
     def __getitem__(self, key: str) -> Any:
         """Pobiera wartość z konfiguracji za pomocą nawiasów kwadratowych."""

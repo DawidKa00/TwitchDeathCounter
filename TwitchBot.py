@@ -21,6 +21,16 @@ class TwitchBot:
         self.username = os.getenv("USER_NAME")
         self.oauth_token = os.getenv("OAUTH_TOKEN")
 
+        if not self.username:
+            logging.error("❌ ERROR: Missing USER_NAME in environment variables.")
+            print("❌ ERROR: Missing USER_NAME in environment variables.")
+            exit(1)
+
+        if not self.oauth_token:
+            logging.error("❌ ERROR: Missing OAUTH_TOKEN in environment variables.")
+            print("❌ ERROR: Missing OAUTH_TOKEN in environment variables.")
+            exit(1)
+
         self.deaths = 0  # Licznik ogólnych śmierci
         self.boss_paused = False  # Flaga, czy boss jest zatrzymany
         self.boss_paused_time = timedelta()
@@ -49,6 +59,7 @@ class TwitchBot:
 
     def start(self):
         """Rozpocznij działanie bota."""
+
         logging.basicConfig(filename=(self.channel + ".log"), encoding='utf-8', level=logging.INFO,
                             format='%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
         try:
