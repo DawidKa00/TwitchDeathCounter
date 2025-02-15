@@ -7,7 +7,7 @@
    - This will be the account that runs the bot  
 
 2. **Generate an OAuth Token**  
-   - Go to [OAuth Password Generator](https://twitchapps.com/tmi/)  
+   - Go to [OAuth Password Generator](https://twitchtokengenerator.com/)  
    - Log in with the bot's Twitch account  
    - Copy the generated key (including `oauth:`)  
 
